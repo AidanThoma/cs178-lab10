@@ -14,13 +14,54 @@ def create_movie():
     Prompt user for a Movie Title.
     Add the movie to the database with the title and an empty Ratings list.
     """
-    print("creating a movie")
+    try:
+        title = input("Name of movie: ")
+        year = input("Year it came out: ")
+
+        response = table.put_item(
+            Item={
+                "Title": title,
+                "Year": year
+            }
+        )
+
+        print("creating a movie")
+    except Exception as e:
+        print(f"An error occoured: {e}")
+
+
+def print_movie(movie):
+    """Print a single movie's details in a readable format."""
+    title = movie.get("Title", "Unknown Title")
+    year = movie.get("Year", "Unknown Year")
+    
+    # Ratings is a nested map in the table — handle it gracefully
+    ratings = movie.get("Ratings", {})
+    rating_str = ", ".join(map(str, ratings)) if ratings else "No ratings"
+    
+    print(f"  Title : {title}")
+    print(f"  Year  : {year}")
+    print(f"Ratings : {rating_str}")
+    print()
+
 
 def print_all_movies():
-    """
-    Display all movies in the database.
-    """
-    print("display all movies")
+    """Scan the entire Movies table and print each item."""
+    
+    # scan() retrieves ALL items in the table.
+    # For large tables you'd use query() instead — but for our small
+    # dataset, scan() is fine.
+    response = table.scan()
+    items = response.get("Items", [])
+    
+    if not items:
+        print("No movies found. Make sure your DynamoDB table has data.")
+        return
+    
+    print(f"Found {len(items)} movie(s):\n")
+    for movie in items:
+        print_movie(movie)
+
 
 def update_rating():
     """
@@ -28,6 +69,21 @@ def update_rating():
     Prompt user for a rating (integer).
     Append the rating to the movie's Ratings list in the database.
     """
+    try:
+        title = input("What is the movie title: ")
+        rating = int(input("What is the rating: "))
+
+        table.update_item(
+    Key={
+        'Title': title,
+    },
+    UpdateExpression='SET Ratings = list_append(Ratings, :val1)',
+    ExpressionAttributeValues={
+        ':val1': [rating]
+    })
+    except Exception as e:
+        print("An error has occoured: ", e)
+
     print("updating rating")
 
 def delete_movie():
